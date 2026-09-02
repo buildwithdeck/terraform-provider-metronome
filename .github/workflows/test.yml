@@ -1,0 +1,54 @@
+# Build on every PR; run acceptance tests against Deck's Metronome Sandbox
+# tenant when the METRONOME_BEARER_TOKEN secret is configured.
+name: Acceptance Tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./... -count=1
+
+  # Secrets are not readable from a job-level `if`, so surface presence as an output.
+  check-secret:
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - id: check
+        run: echo "has_token=${{ secrets.METRONOME_BEARER_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
+  acceptance:
+    needs: [build, check-secret]
+    # Fork PRs never receive repository secrets; maintainers run those via the
+    # safe-to-test label (see acceptance-fork.yml). Skip when no token is set.
+    if: >-
+      needs.check-secret.outputs.has_token == 'true' &&
+      (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: Run acceptance tests
+        run: go test ./internal/provider/ -v -timeout 600s
+        env:
+          TF_ACC: "1"
+          METRONOME_BEARER_TOKEN: ${{ secrets.METRONOME_BEARER_TOKEN }}
+          METRONOME_BASE_URL: ${{ vars.METRONOME_BASE_URL }}
