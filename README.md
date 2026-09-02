@@ -47,7 +47,7 @@ make testacc    # acceptance tests, needs METRONOME_BEARER_TOKEN
 
 ### Acceptance tests
 
-Acceptance tests run against Deck's Metronome **Sandbox** tenant. Never point `TF_ACC` at a production token: tests archive what they create, and archiving cannot be undone. Every test object is named `tf-acc-<prefix>-<random>`, and `go test ./internal/provider/ -sweep=all` archives leftovers older than an hour.
+Acceptance tests run against Deck's Metronome **Sandbox** tenant. Never point `TF_ACC` at a production token: tests archive what they create, and archiving cannot be undone. Every test object is named `tf-acc-<prefix>-<random>`, and `make sweep` archives leftovers when no test run is active. The Sandbox is a Metronome trial tenant capped at 5 active customers (archived ones do not count), so tests that create customers cannot run until Metronome raises the cap (Linear V2-3672). Observed API behaviour from the Sandbox spike is in [docs/API-NOTES.md](docs/API-NOTES.md).
 
 ```sh
 TF_ACC=1 METRONOME_BEARER_TOKEN=<sandbox token> go test ./internal/provider/ -v -timeout 600s
