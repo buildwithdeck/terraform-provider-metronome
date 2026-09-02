@@ -40,3 +40,7 @@ crash.log
 
 # Claude Code local settings — may contain secrets, never commit
 .claude/settings.local.json
+
+# Go coverage output is ignored via coverage.*; macOS git matches ignores case-insensitively,
+# so keep the hand-maintained resource matrix explicitly.
+!docs/COVERAGE.md
