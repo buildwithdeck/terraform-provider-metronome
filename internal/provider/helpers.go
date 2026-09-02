@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	metronome "github.com/Metronome-Industries/metronome-go/v3"
@@ -42,4 +43,52 @@ func isNotFound(err error) bool {
 // addAPIError is the one error shape every CRUD method reports.
 func addAPIError(diags *diag.Diagnostics, verb, thing string, err error) {
 	diags.AddError(fmt.Sprintf("Unable to %s %s", verb, thing), err.Error())
+}
+
+// hourFloor truncates t to the hour in UTC. Product updates are scheduled on
+// hour boundaries; passing the current hour floor makes an update effective now.
+func hourFloor(t time.Time) time.Time {
+	return t.UTC().Truncate(time.Hour)
+}
+
+// customFieldsDiff reconciles the custom fields on an entity: added or changed
+// keys are set in one SetValues call, removed keys go in one DeleteValues call.
+// entity is the Metronome entity type ("customer", "product", ...). Values are
+// capped at 200 characters by the API; each call is transactional on its side.
+func customFieldsDiff(ctx context.Context, client *metronome.Client, entity, entityID string, old, new map[string]string) error {
+	set := map[string]string{}
+	for k, v := range new {
+		if ov, ok := old[k]; !ok || ov != v {
+			set[k] = v
+		}
+	}
+	var del []string
+	for k := range old {
+		if _, ok := new[k]; !ok {
+			del = append(del, k)
+		}
+	}
+	sort.Strings(del)
+
+	if len(set) > 0 {
+		err := client.V1.CustomFields.SetValues(ctx, metronome.V1CustomFieldSetValuesParams{
+			Entity:       metronome.V1CustomFieldSetValuesParamsEntity(entity),
+			EntityID:     entityID,
+			CustomFields: set,
+		})
+		if err != nil {
+			return fmt.Errorf("set custom fields: %w", err)
+		}
+	}
+	if len(del) > 0 {
+		err := client.V1.CustomFields.DeleteValues(ctx, metronome.V1CustomFieldDeleteValuesParams{
+			Entity:   metronome.V1CustomFieldDeleteValuesParamsEntity(entity),
+			EntityID: entityID,
+			Keys:     del,
+		})
+		if err != nil {
+			return fmt.Errorf("delete custom fields: %w", err)
+		}
+	}
+	return nil
 }

@@ -8,7 +8,9 @@ Terraform provider for Metronome (usage-based billing). Go, terraform-plugin-fra
 main.go                       provider server; //go:generate for tfplugindocs
 internal/provider/            ONE flat package (framework needs all constructors in one place)
   provider.go                 schema (bearer_token, base_url); Configure → ProviderData{Client}
-  helpers.go                  rawPost, readGone, isNotFound, addAPIError
+  helpers.go                  rawPost, readGone, isNotFound, addAPIError, hourFloor, customFieldsDiff
+  mock_test.go                newMockClient (httptest, records "METHOD /path" + body), jsonHandler, routes, bodyJSON
+  sweepers_test.go            resource.AddTestSweepers per archivable entity (tf-acc-* only)
   provider_test.go            test factories, testAccPreCheck, tfAccName
   testmain_test.go            resource.TestMain (sweepers)
   resource_<name>.go          one file per resource (+ resource_<name>_test.go)
@@ -24,7 +26,7 @@ make build && go vet ./...     # must pass on every commit
 make test                      # unit tests (httptest), no credentials
 make generate                  # regenerate docs/ after any schema or example change
 TF_ACC=1 METRONOME_BEARER_TOKEN=<sandbox token> go test ./internal/provider/ -v -timeout 600s
-go test ./internal/provider/ -sweep=all   # archive leftover tf-acc-* objects (Sandbox only)
+make sweep                     # archive leftover tf-acc-* objects; ONLY when no acceptance job is running
 ```
 
 ## Adding a resource
@@ -46,7 +48,8 @@ go test ./internal/provider/ -sweep=all   # archive leftover tf-acc-* objects (S
 - **Amend-only objects** (contract): implement `ResourceWithModifyPlan` and reject unsupported diffs with an actionable message. Never `RequiresReplace` a contract; replacement archives it and voids invoices.
 - **Import-first resources** (`metronome_billing_provider`, `metronome_stripe_billing_settings`): acceptance test = import + empty plan against the Sandbox's pre-provisioned Stripe connection. Never create or destroy that connection in tests.
 - **Write-only secrets** (Stripe key, webhook secret): never set in the mapper, preserve from prior state, `ImportStateVerifyIgnore`.
-- **Acceptance test hygiene:** every name / alias / uniqueness key via `tfAccName(prefix)`; `CheckDestroy` asserts `archived_at != null`, not 404; register a sweeper for each archivable entity.
+- **Acceptance test hygiene:** every name / alias / uniqueness key via `tfAccName(prefix)`; `CheckDestroy` asserts `archived_at != null`, not 404; register a sweeper for each archivable entity in `sweepers_test.go`. Sweepers match `tf-acc-*` names only and have no age guard (Metronome objects lack a uniform `created_at`), so `make sweep` runs only when nothing else is testing against the Sandbox.
+- **Read-only unit test recipe:** `client, calls := newMockClient(t, jsonHandler(200, fixture))`, call the resource's `Read`, then assert `routes(calls())` equals exactly the expected read route(s).
 - **SDK trap:** `client.V1.Contracts.NamedSchedules` calls the **rate-card** named-schedule endpoints and `client.V1.Contracts.RateCards.NamedSchedules` calls the **contract** ones. Pick the service by the `path :=` string in the SDK source and pin it with the httptest path assertion.
 - **`Idempotency-Key` header caches errors, including 500s.** Do not send a stable key on retries. Use the body-level `uniqueness_key` where the API offers it.
 - Error diagnostics go through `addAPIError(&resp.Diagnostics, "create", "billable metric", err)`.
