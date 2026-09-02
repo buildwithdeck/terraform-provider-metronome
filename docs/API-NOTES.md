@@ -8,6 +8,8 @@ bodies are as returned. Spec = https://docs.metronome.com/openapi.json.
   customers. To add more customers, contact Metronome's Sales team."}`. The Sandbox holds 5 active
   and 9 archived customers, so archived customers do NOT count. Tracked in Linear V2-3672; until
   Metronome raises the cap, acceptance tests that create a customer cannot run on this tenant.
+- `GET /v1/customers?only_archived=true` lists archived customers. Archive body is `{id}`; clear
+  aliases first with `POST /v1/customers/{id}/setIngestAliases {"ingest_aliases":[]}`.
 - Archiving is the only delete; archived objects stay readable.
 
 ## Rates (`metronome_rate`)
@@ -63,7 +65,8 @@ bodies are as returned. Spec = https://docs.metronome.com/openapi.json.
   hierarchy_configuration, netsuite_sales_order_id, package_alias, package_id,
   professional_services, reseller_royalties, revenue_system_configuration,
   salesforce_opportunity_id, starting_at, total_contract_value, transition, usage_filter`.
-- Response `{data:{id}}`. Duplicate `uniqueness_key` → 409.
+- Response `{data:{id}}`. Duplicate `uniqueness_key` → 409 `This uniqueness key has already been used`.
+- `aliases: [{name}]` works; alias `starting_at` / `ending_before` are optional.
 - `packages/get` top keys: aliases, commits, created_at, created_by, credits, id,
   multiplier_override_prioritization, name, overrides, rate_card_id, recurring_commits,
   recurring_credits, scheduled_charges, subscriptions, uniqueness_key,
@@ -72,8 +75,10 @@ bodies are as returned. Spec = https://docs.metronome.com/openapi.json.
 - `credits[].access_schedule.schedule_items[]` require `amount, starting_at_offset, duration`
   (RelativeDate `{value, unit: DAYS|WEEKS|MONTHS|YEARS}`). Read-back returns RelativeDate
   values as strings and `product: {id, name}` instead of `product_id`.
-- `recurring_credits` matching the spec's required fields is rejected 400
-  `instance failed to match all required schemas (matched only 1 out of 2)`. Open issue.
+- `recurring_credits` with every spec-required field (`product_id, access_amount, priority,
+  commit_duration, starting_at_offset`), with and without optionals, is rejected 400
+  `instance failed to match all required schemas (matched only 1 out of 2)`. Server/spec drift;
+  open question for Metronome before the recurring-credit block ships.
 - `packages/archive` 200; again → 422 `already archived`. `packages/list` defaults to
   NOT_ARCHIVED (`archive_filter: ARCHIVED|ALL`), page size 10, `limit`/`next_page` are
   QUERY parameters.
@@ -82,7 +87,8 @@ bodies are as returned. Spec = https://docs.metronome.com/openapi.json.
 - `customFields/addKey` `{entity, key, enforce_uniqueness}` → 200 `{data:{id}}`; the id
   is never returned by any read. Duplicate → 400 `Duplicate custom field key`.
 - `listKeys` `{entities:[...]}` → items `{entity, key, enforce_uniqueness}` only.
-- `removeKey` → 200 empty body; key disappears (no archived marker); again → 404.
+- `removeKey` → 200 with a `null` body; key disappears (no archived marker); again → 404
+  `Custom field key not found`.
 - Provider id = `<entity>/<key>`; existence check = presence in listKeys.
 
 ## Customer billing provider configuration (`metronome_customer_billing_provider_configuration`)
