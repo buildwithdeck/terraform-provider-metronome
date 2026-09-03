@@ -12,7 +12,7 @@ Legend: SDK = method on `client.V1.` / `client.V2.`. RAW = not in the SDK, calle
 | -- | -- | -- | -- |
 | 0a | Repo scaffold from the Clerk skeleton | V2-3635 | ✅ |
 | 0b | Sandbox tenant API token, `METRONOME_BEARER_TOKEN` secret, Stripe test connection | V2-3636 | ✅ |
-| 0c | Shared plumbing: sweepers, `hourFloor`, `customFieldsDiff`, read-only httptest harness | V2-3637 | ⬜ |
+| 0c | Shared plumbing: sweepers, `hourFloor`, `customFieldsDiff`, read-only httptest harness | V2-3637 | ✅ |
 | 0d | API spike resolving open behaviour questions | V2-3660 | ⬜ |
 
 ## Phase 1: Catalog primitives
