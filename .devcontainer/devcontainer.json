@@ -25,7 +25,8 @@
   // if you're on Insiders — adjust if needed). macOS host path:
   // ~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev
   "mounts": [
-    "source=${localEnv:HOME}/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev,target=/root/.vscode-server/data/User/globalStorage/saoudrizwan.claude-dev,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev,target=/root/.vscode-server/data/User/globalStorage/saoudrizwan.claude-dev,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached,readonly"
   ],
 
   "customizations": {
