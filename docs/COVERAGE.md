@@ -19,7 +19,7 @@ Legend: SDK = method on `client.V1.` / `client.V2.`. RAW = not in the SDK, calle
 
 | Resource | Create | Read | Update | Delete | FN | Linear | Status |
 | -- | -- | -- | -- | -- | -- | -- | -- |
-| `metronome_custom_field_key` | `CustomFields.AddKey` | `CustomFields.ListKeys` filtered | none | `CustomFields.RemoveKey` (hard, drops values) | all | V2-3638 | ⬜ |
+| `metronome_custom_field_key` | `CustomFields.AddKey` | `CustomFields.ListKeys` filtered | none | `CustomFields.RemoveKey` (hard, drops values) | all | V2-3638 | ✅ |
 | `metronome_notification` | `V2.Notifications.Offset.New` | `.Get` | `.Edit` | `.Archive` | none | V2-3639 | ⬜ |
 | `metronome_billable_metric` | `BillableMetrics.New` | `.Get` | `.Update` (name only) | `.Archive` | all but `name` | V2-3640 | ⬜ |
 | `metronome_alert` | `Alerts.New` (+`uniqueness_key`) | `Customers.Alerts.Get` when `customer_id` set, else state | none | `Alerts.Archive` (`release_uniqueness_key=true`) | all | V2-3641 | ⬜ |

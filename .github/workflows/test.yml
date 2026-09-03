@@ -43,9 +43,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: hashicorp/setup-terraform@v4
+      - uses: opentofu/setup-opentofu@v2
         with:
-          terraform_wrapper: false
+          tofu_version: 1.12.6
+          tofu_wrapper: false
       - name: Run acceptance tests
         run: go test ./internal/provider/ -v -timeout 600s
         env:

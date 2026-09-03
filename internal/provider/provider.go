@@ -117,7 +117,9 @@ func (p *MetronomeProvider) Configure(ctx context.Context, req provider.Configur
 }
 
 func (p *MetronomeProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewCustomFieldKeyResource,
+	}
 }
 
 func (p *MetronomeProvider) DataSources(_ context.Context) []func() datasource.DataSource {
