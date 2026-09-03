@@ -1,0 +1,56 @@
+{
+  "name": "terraform-provider-metronome",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+
+  // Mount the workspace at /workspace (matches WORKDIR in Dockerfile).
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+
+  // Forward METRONOME_BEARER_TOKEN and METRONOME_BASE_URL from the host so
+  // acceptance tests work without baking secrets into the image.
+  // Set them in your shell profile or a .env file (already in .gitignore).
+  "remoteEnv": {
+    "METRONOME_BEARER_TOKEN": "${localEnv:METRONOME_BEARER_TOKEN}",
+    "METRONOME_BASE_URL": "${localEnv:METRONOME_BASE_URL}"
+  },
+
+  // Bind-mount Cline's global storage from the host so task history,
+  // checkpoints, and settings (API keys, MCP config) persist into the
+  // container instead of starting empty on every rebuild. The container runs
+  // as root (no USER in the Dockerfile), so the target is under /root, and
+  // VS Code Server's data dir is ~/.vscode-server (not .vscode-server-insiders
+  // if you're on Insiders — adjust if needed). macOS host path:
+  // ~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev
+  "mounts": [
+    "source=${localEnv:HOME}/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev,target=/root/.vscode-server/data/User/globalStorage/saoudrizwan.claude-dev,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached,readonly"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "hashicorp.terraform",
+        "saoudrizwan.claude-dev"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": false,
+        "go.formatTool": "gofmt",
+        "[go]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  // Install Go tooling (gopls, dlv, etc.) after the container starts.
+  // golangci-lint and tofu are already baked into the image layer.
+  "postCreateCommand": "go install golang.org/x/tools/gopls@latest && go install github.com/go-delve/delve/cmd/dlv@latest"
+}
