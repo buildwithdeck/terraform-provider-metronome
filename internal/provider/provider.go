@@ -98,14 +98,23 @@ func (p *MetronomeProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
+	// Resolve base URL: explicit config > env var > production default.
+	// We always pass WithBaseURL explicitly because the SDK's DefaultClientOptions
+	// uses os.LookupEnv (not os.Getenv), meaning an empty METRONOME_BASE_URL env
+	// var (e.g. an unset GitHub Actions variable rendering as "") still triggers
+	// WithBaseURL("") and corrupts the client. Our explicit option appended last
+	// wins over whatever DefaultClientOptions picked up.
 	baseURL := os.Getenv("METRONOME_BASE_URL")
 	if !config.BaseURL.IsNull() {
 		baseURL = config.BaseURL.ValueString()
 	}
+	if baseURL == "" {
+		baseURL = "https://api.metronome.com/"
+	}
 
-	opts := []option.RequestOption{option.WithBearerToken(token)}
-	if baseURL != "" {
-		opts = append(opts, option.WithBaseURL(baseURL))
+	opts := []option.RequestOption{
+		option.WithBearerToken(token),
+		option.WithBaseURL(baseURL),
 	}
 	client := metronome.NewClient(opts...)
 
